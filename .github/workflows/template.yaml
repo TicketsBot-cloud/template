@@ -60,6 +60,6 @@ jobs:
           context: .
           push: true
           tags: |
-            ${{ env.GITHUB_REPOSITORY_OWNER }}/${{ inputs.package_name }}:${{ env.IMAGE_TAG }}
-            ${{ env.GITHUB_REPOSITORY_OWNER }}/${{ inputs.package_name }}:${{ inputs.sha }}
+            ${{ env.REGISTRY }}/${{ env.GITHUB_REPOSITORY_OWNER }}/${{ inputs.package_name }}:${{ env.IMAGE_TAG }}
+            ${{ env.REGISTRY }}/${{ env.GITHUB_REPOSITORY_OWNER }}/${{ inputs.package_name }}:${{ inputs.sha }}
           labels: ${{ steps.meta.outputs.labels }}
