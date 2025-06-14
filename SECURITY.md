@@ -10,7 +10,7 @@ This is the list of currently supported versions across the various repos for th
 
 ## Reporting a Vulnerability
 
-If you have encountered a potential security vulnerability in this project, please report it to us at admin@ticketsbot.cloud. We will work with you to verify the vulnerability and patch it.
+If you have encountered a potential security vulnerability in this project, please report it to us at support@tickets.bot. We will work with you to verify the vulnerability and patch it.
 
 When reporting issues, please provide the following information:
 
