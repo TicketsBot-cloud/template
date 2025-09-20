@@ -63,3 +63,19 @@ jobs:
             ${{ env.REGISTRY }}/${{ env.GITHUB_REPOSITORY_OWNER }}/${{ inputs.package_name }}:${{ env.IMAGE_TAG }}
             ${{ env.REGISTRY }}/${{ env.GITHUB_REPOSITORY_OWNER }}/${{ inputs.package_name }}:${{ inputs.sha }}
           labels: ${{ steps.meta.outputs.labels }}
+          
+      - name: Trigger deployment update
+        uses: actions/github-script@v6
+        with:
+          github-token: ${{ secrets.DEPLOYMENT_TOKEN }}
+          script: |
+            await github.rest.actions.createWorkflowDispatch({
+              owner: 'ticketsbot-cloud',
+              repo: 'infra',
+              workflow_id: 'update-deployment.yml',
+              ref: 'main',
+              inputs: {
+                deployment_name: '${{ inputs.package_name }}',
+                image_sha: '${{ inputs.sha }}'
+              }
+            })
