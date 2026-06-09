@@ -90,19 +90,19 @@ jobs:
             const labelsToAdd = new Set();
             const labelsToRemove = new Set();
 
-            // needs:bump_db — PR body links to database repo
+            // needs:bump_db - PR body links to database repo
             const dbPattern = /(?:https?:\/\/github\.com\/TicketsBot-cloud\/database\/pull\/\d+|TicketsBot-cloud\/database#\d+)/i;
             if (dbPattern.test(body)) {
               labelsToAdd.add('needs:bump_db');
             }
 
-            // needs:bump_common — PR body links to common repo
+            // needs:bump_common - PR body links to common repo
             const commonPattern = /(?:https?:\/\/github\.com\/TicketsBot-cloud\/common\/pull\/\d+|TicketsBot-cloud\/common#\d+)/i;
             if (commonPattern.test(body)) {
               labelsToAdd.add('needs:bump_common');
             }
 
-            // needs:gomod_comment — uncommented local replace directives in go.mod
+            // needs:gomod_comment - uncommented local replace directives in go.mod
             try {
               const gomod = fs.readFileSync('go.mod', 'utf8');
               const replacePattern = /^replace\s+\S+\s+=>\s+\.\./m;
@@ -115,7 +115,7 @@ jobs:
               core.info('No go.mod found, skipping replace directive check');
             }
 
-            // type:* labels — PR body checkboxes
+            // type:* labels - PR body checkboxes
             const typeChecks = [
               { pattern: /- \[x\] Bug fix/i,        label: 'type:bug' },
               { pattern: /- \[x\] New feature/i,     label: 'type:feature' },

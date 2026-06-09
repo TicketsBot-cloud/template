@@ -13,6 +13,10 @@ on:
       sha:
         required: true
         type: string
+      working_directory:
+        required: false
+        type: string
+        default: '.'
 
 jobs:
   publish-image:
@@ -57,7 +61,8 @@ jobs:
       - name: Build and push Docker image
         uses: docker/build-push-action@f2a1d5e99d037542a71f64918e516c093c6f3fc4
         with:
-          context: .
+          context: ${{ inputs.working_directory }}
+          file: ${{ inputs.working_directory }}/Dockerfile
           push: true
           tags: |
             ${{ env.REGISTRY }}/${{ env.GITHUB_REPOSITORY_OWNER }}/${{ inputs.package_name }}:${{ env.IMAGE_TAG }}
