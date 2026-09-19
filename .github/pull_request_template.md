@@ -5,6 +5,10 @@
 - [ ] Bug fix
 - [ ] New feature
 - [ ] Breaking change
+- [ ] Enhancement
+- [ ] Update
+- [ ] Addition
+- [ ] Translation
 
 ## Testing
 <!-- Describe the tests you ran to verify your changes -->
