@@ -18,9 +18,9 @@
 <!-- Link the corresponding new-docs PR, if this change needs a docs update -->
 
 ## Feature flag
-```
-```
 <!-- Key (if applicable), e.g. 202609_SOME_FEATURE. Leave blank if this change ships without one. -->
+```
+```
 
 ## Checklist
 - [ ] I have performed a self-review of my own code
