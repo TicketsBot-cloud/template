@@ -5,14 +5,26 @@
 - [ ] Bug fix
 - [ ] New feature
 - [ ] Breaking change
+- [ ] Enhancement
+- [ ] Update
+<!-- Only use the below for the locale/ repo -->
+- [ ] Addition
+- [ ] Translation
 
 ## Testing
 <!-- Describe the tests you ran to verify your changes -->
 
+## Related docs PR
+<!-- Link the corresponding new-docs PR, if this change needs a docs update -->
+
+## Feature flag
+<!-- Key (if applicable), e.g. 202609_SOME_FEATURE. Leave blank if this change ships without one. -->
+```
+```
+
 ## Checklist
-- [ ] My code follows the style of this project
 - [ ] I have performed a self-review of my own code
-- [ ] I have commented my code, particularly in hard-to-understand areas
-- [ ] I have made corresponding changes to the documentation
-- [ ] My changes generate no new warnings
-- [ ] I have added tests that prove my fix is effective or that my feature works
+- [ ] I have added or updated tests that prove my fix is effective or that my feature works
+
+## Dependencies
+<!-- Link any dependency PRs for common/database or any other repos that must be released at the same time -->

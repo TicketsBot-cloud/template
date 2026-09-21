@@ -27,13 +27,20 @@ jobs:
             const body = pr.body || '';
 
             const LABEL_DEFS = {
-              'needs:bump_db':       { color: 'd93f0b', description: 'PR references database repo changes' },
-              'needs:bump_common':   { color: 'd93f0b', description: 'PR references common repo changes' },
+              'needs:bump_db':       { color: 'd93f0b', description: 'PR references a database PR but go.mod is not yet bumped' },
+              'needs:bump_common':   { color: 'd93f0b', description: 'PR references a common PR but go.mod is not yet bumped' },
               'needs:gomod_comment': { color: 'b60205', description: 'go.mod has uncommented local replace directives' },
               'type:bug':            { color: 'd73a4a', description: 'Bug Fixes' },
               'type:feature':        { color: '0e8a16', description: 'New Feature' },
               'type:breaking':       { color: '6f42c1', description: 'Breaking Change' },
+              'type:enhancement':    { color: 'a2eeef', description: 'Enhancement' },
+              'type:update':         { color: 'fbca04', description: 'Update' },
+              'type:addition':       { color: 'c5def5', description: 'Addition' },
+              'type:translation':    { color: '5319e7', description: 'Translation' },
             };
+
+            const BLOCKING_LABELS = ['needs:bump_db', 'needs:bump_common', 'needs:gomod_comment'];
+            const GATE_MARKER = '<!-- auto-label-gate -->';
 
             async function ensureLabelExists(labelName) {
               try {
@@ -90,36 +97,81 @@ jobs:
             const labelsToAdd = new Set();
             const labelsToRemove = new Set();
 
-            // needs:bump_db - PR body links to database repo
-            const dbPattern = /(?:https?:\/\/github\.com\/TicketsBot-cloud\/database\/pull\/\d+|TicketsBot-cloud\/database#\d+)/i;
-            if (dbPattern.test(body)) {
-              labelsToAdd.add('needs:bump_db');
+            // Read go.mod at HEAD (as checked out) and at the PR's base commit, so we can tell
+            // whether a dependency's pinned version has actually moved, not just whether the PR
+            // description mentions it.
+            const headGomod = (() => {
+              try {
+                return fs.readFileSync('go.mod', 'utf8');
+              } catch {
+                return null;
+              }
+            })();
+
+            async function getGomodAtRef(ref) {
+              try {
+                const res = await github.rest.repos.getContent({ owner, repo, path: 'go.mod', ref });
+                return Buffer.from(res.data.content, 'base64').toString('utf8');
+              } catch (e) {
+                if (e.status === 404) return null;
+                throw e;
+              }
             }
 
-            // needs:bump_common - PR body links to common repo
+            const baseGomod = headGomod ? await getGomodAtRef(pr.base.sha) : null;
+
+            function moduleVersion(gomod, modulePath) {
+              if (!gomod) return null;
+              const escaped = modulePath.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+              const match = gomod.match(new RegExp(`^\\s*${escaped}\\s+(\\S+)`, 'm'));
+              return match ? match[1] : null;
+            }
+
+            // A dependency counts as "bumped" if it isn't a dependency at all (nothing to block
+            // on), or its pinned version differs between the base commit and this PR's head.
+            function depBumped(modulePath) {
+              if (!headGomod) return true;
+              const headVersion = moduleVersion(headGomod, modulePath);
+              if (headVersion === null) return true;
+              return headVersion !== moduleVersion(baseGomod, modulePath);
+            }
+
+            // needs:bump_db - PR body links a database PR, but go.mod still pins the old version
+            const dbPattern = /(?:https?:\/\/github\.com\/TicketsBot-cloud\/database\/pull\/\d+|TicketsBot-cloud\/database#\d+)/i;
+            if (dbPattern.test(body) && !depBumped('github.com/TicketsBot-cloud/database')) {
+              labelsToAdd.add('needs:bump_db');
+            } else if (currentLabels.has('needs:bump_db')) {
+              labelsToRemove.add('needs:bump_db');
+            }
+
+            // needs:bump_common - PR body links a common PR, but go.mod still pins the old version
             const commonPattern = /(?:https?:\/\/github\.com\/TicketsBot-cloud\/common\/pull\/\d+|TicketsBot-cloud\/common#\d+)/i;
-            if (commonPattern.test(body)) {
+            if (commonPattern.test(body) && !depBumped('github.com/TicketsBot-cloud/common')) {
               labelsToAdd.add('needs:bump_common');
+            } else if (currentLabels.has('needs:bump_common')) {
+              labelsToRemove.add('needs:bump_common');
             }
 
             // needs:gomod_comment - uncommented local replace directives in go.mod
-            try {
-              const gomod = fs.readFileSync('go.mod', 'utf8');
-              const replacePattern = /^replace\s+\S+\s+=>\s+\.\./m;
-              if (replacePattern.test(gomod)) {
-                labelsToAdd.add('needs:gomod_comment');
-              } else if (currentLabels.has('needs:gomod_comment')) {
-                labelsToRemove.add('needs:gomod_comment');
-              }
-            } catch {
-              core.info('No go.mod found, skipping replace directive check');
+            const replacePattern = /^replace\s+\S+\s+=>\s+\.\./m;
+            if (headGomod && replacePattern.test(headGomod)) {
+              labelsToAdd.add('needs:gomod_comment');
+            } else if (currentLabels.has('needs:gomod_comment')) {
+              labelsToRemove.add('needs:gomod_comment');
+            }
+            if (!headGomod) {
+              core.info('No go.mod found, skipping dependency-bump and replace directive checks');
             }
 
             // type:* labels - PR body checkboxes
             const typeChecks = [
-              { pattern: /- \[x\] Bug fix/i,        label: 'type:bug' },
-              { pattern: /- \[x\] New feature/i,     label: 'type:feature' },
-              { pattern: /- \[x\] Breaking change/i, label: 'type:breaking' },
+              { pattern: /- \[x\] Bug fix/i,         label: 'type:bug' },
+              { pattern: /- \[x\] New feature/i,      label: 'type:feature' },
+              { pattern: /- \[x\] Breaking change/i,  label: 'type:breaking' },
+              { pattern: /- \[x\] Enhancement/i,      label: 'type:enhancement' },
+              { pattern: /- \[x\] Update/i,           label: 'type:update' },
+              { pattern: /- \[x\] Addition/i,         label: 'type:addition' },
+              { pattern: /- \[x\] Translation/i,      label: 'type:translation' },
             ];
 
             for (const { pattern, label } of typeChecks) {
@@ -141,3 +193,40 @@ jobs:
             }
 
             core.info('Auto-labelling complete');
+
+            // Gate: block the PR while any blocking label is present. finalLabels reflects the
+            // true end state without a second API round trip - currentLabels plus this run's diff.
+            const finalLabels = new Set(currentLabels);
+            for (const label of labelsToAdd) finalLabels.add(label);
+            for (const label of labelsToRemove) finalLabels.delete(label);
+
+            const activeBlockers = BLOCKING_LABELS.filter(label => finalLabels.has(label));
+
+            const comments = await github.paginate(github.rest.issues.listComments, {
+              owner,
+              repo,
+              issue_number: prNumber,
+            });
+            const existingComment = comments.find(c => c.body && c.body.includes(GATE_MARKER));
+
+            if (activeBlockers.length > 0) {
+              const reasons = activeBlockers
+                .map(label => `- \`${label}\` - ${LABEL_DEFS[label].description}`)
+                .join('\n');
+              const commentBody = `${GATE_MARKER}\n### This PR is blocked\n\n${reasons}\n\nRemove the label(s) above once the underlying dependency bump or comment has landed, and this check will re-run on the next push.`;
+
+              if (existingComment) {
+                await github.rest.issues.updateComment({ owner, repo, comment_id: existingComment.id, body: commentBody });
+              } else {
+                await github.rest.issues.createComment({ owner, repo, issue_number: prNumber, body: commentBody });
+              }
+
+              core.setFailed(`Blocked by label(s): ${activeBlockers.join(', ')}`);
+            } else if (existingComment) {
+              await github.rest.issues.updateComment({
+                owner,
+                repo,
+                comment_id: existingComment.id,
+                body: `${GATE_MARKER}\n### Resolved\n\nNo blocking labels remain.`,
+              });
+            }
